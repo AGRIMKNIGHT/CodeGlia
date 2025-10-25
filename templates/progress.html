@@ -1,0 +1,21 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CodeGlia - Scanning...</title>
+    <style>
+        body { background-color: #121212; color: #fff; font-family: Arial; text-align: center; margin-top: 15%; }
+        .spinner { border: 6px solid #333; border-top: 6px solid #1db954; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <meta http-equiv="refresh" content="5">
+</head>
+<body>
+    <div class="spinner"></div>
+    <h2>🔍 CodeGlia is scanning your project...</h2>
+    <p>Scan started at: {{ timestamp }}</p>
+    <p>⏳ This may take a minute or two. The page will refresh automatically.</p>
+</body>
+</html>
