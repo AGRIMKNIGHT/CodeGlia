@@ -1,0 +1,23 @@
+# Environment variables
+.env
+
+# Python cache and virtual environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+
+# Output and scan results
+output/
+scans/
+*.json
+*.html
+
+# Docker artifacts
+*.log
+*.pid
+
+# VSCode and system files
+.vscode/
+.DS_Store
