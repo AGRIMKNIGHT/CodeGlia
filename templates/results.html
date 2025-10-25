@@ -52,8 +52,8 @@
 
     {% if report_exists %}
       <p><a href="/view-report" target="_blank" class="btn-link">View Full HTML Report</a></p>
-      <p><a href="/download-report.html" class="btn-link" download>Download HTML Report</a></p>
-      <p><a href="/download-report.json" class="btn-link" download>Download JSON Report</a></p>
+      <p><a href="{{ url_for('download_file', filename='scan_report.html') }}" class="btn-link" download>Download HTML Report</a></p>
+      <p><a href="{{ url_for('download_file', filename='scan_report.json') }}" class="btn-link" download>Download JSON Report</a></p>
     {% else %}
       <p>No report found.</p>
     {% endif %}

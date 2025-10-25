@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, abort
+from werkzeug.utils import safe_join
 import os
 import subprocess
 import datetime
@@ -29,6 +30,12 @@ def upload():
         return redirect(url_for("index"))
 
     if file and file.filename.endswith(".zip"):
+        # Cleanup previous datasets, scans, and output
+        for folder in [UPLOAD_FOLDER, SCANS_FOLDER, OUTPUT_FOLDER]:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+            os.makedirs(folder, exist_ok=True)
+
         upload_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(upload_path)
 
@@ -78,21 +85,18 @@ def results():
 def view_report():
     return send_from_directory(OUTPUT_FOLDER, "scan_report.html")
 
-@app.route("/download-report")
-def download_report():
-    file_path = os.path.join(OUTPUT_FOLDER, "scan_report.html")
-    if os.path.exists(file_path):
-        return send_from_directory(OUTPUT_FOLDER, "scan_report.html", as_attachment=True)
-    else:
-        abort(404, description="Report file not found.")
-
-@app.route("/download-json")
-def download_json():
-    file_path = os.path.join(OUTPUT_FOLDER, "report.json")
-    if os.path.exists(file_path):
-        return send_from_directory(OUTPUT_FOLDER, "report.json", as_attachment=True)
-    else:
-        abort(404, description="JSON report file not found.")
+@app.route("/download/<filename>")
+def download_file(filename):
+    allowed_files = ["scan_report.html", "scan_report.json"]
+    if filename not in allowed_files:
+        abort(404, description="File not found.")
+    try:
+        safe_path = safe_join(OUTPUT_FOLDER, filename)
+    except:
+        abort(404, description="Invalid file path.")
+    if not os.path.exists(safe_path):
+        abort(404, description="File not found.")
+    return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
 
 if __name__ == "__main__":
     import os

@@ -27,12 +27,8 @@ def run_command(command_list, description):
         if result.returncode != 0 and result.stderr:
             # Check for the specific "config does not exist" error
             if "does not exist" in result.stderr or "failed to load rules" in result.stderr.lower():
-                 print(f"   ❌ FATAL ERROR: A rule path in your command is incorrect or failed to load. Please check the paths.")
-                 print(result.stderr)
                  return False # Treat this as a fatal error
-            else:
-                 print(f"   ⚠️  Warning/Info from tool:\n{result.stderr.strip()}")
-        print(f"✅ {description} completed.")
+            
         return True
     except Exception as e:
         print(f"❌ FATAL ERROR during {description}: {e}")
@@ -100,14 +96,10 @@ def build_semgrep_command(target_dataset_dir):
     for path in local_rule_paths:
         if os.path.isdir(path):
             semgrep_command.extend(["--config", path])
-        else:
-            print(f"⚠️  Warning: Local rule folder not found: {path}")
+
 
     semgrep_command.append(target_dataset_dir)
 
-    print("\n📦 Using local Semgrep rule packs:")
-    for path in local_rule_paths:
-        print(f"   - {path}")
 
     return semgrep_command, [os.path.basename(p) for p in local_rule_paths if os.path.isdir(p)]
 

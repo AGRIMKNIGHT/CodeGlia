@@ -36,8 +36,8 @@ def get_cwe_details(cwe_id):
         return {"title": "", "description": ""}
     cache = _load_cwe_cache()
     if cwe_id in cache:
-        # Always ensure title is present (HTML fallback if missing)
         cached = cache[cwe_id]
+        # Ensure title is present (HTML <h2> fallback if missing)
         if not cached.get("title"):
             cwe_num = cwe_id.replace("CWE-", "")
             try:
@@ -381,7 +381,6 @@ def get_ai_analysis_batch(vulnerability_summaries: list, use_async=False) -> lis
     batch_size = 10
     batches = [uncached[i:i+batch_size] for i in range(0, len(uncached), batch_size)]
     batch_indices = [uncached_indices[i:i+batch_size] for i in range(0, len(uncached), batch_size)]
-    # Optionally, support async concurrency for multiple batches (if many)
     def _analyze_batch(batch, batch_idx, total_batches):
         batch_start = _time.time()
         print(f"[AI] Analyzing batch {batch_idx+1}/{total_batches}... ({len(batch)} vulnerabilities)")
@@ -438,7 +437,6 @@ Findings:
     total_batches = len(batches)
     ai_call_start = _time.time()
     if use_async and total_batches > 1:
-        # Use thread pool for concurrency (Gemini API does not support asyncio)
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, total_batches)) as executor:
             futures = []
             for i, batch in enumerate(batches):
@@ -447,11 +445,9 @@ Findings:
                 res = fut.result()
                 batch_results_list.append(res)
     else:
-        # Synchronous batching (default)
         for i, batch in enumerate(batches):
             batch_results_list.append(_analyze_batch(batch, i, total_batches))
     ai_call_end = _time.time()
-    # Flatten results and fill in main results array
     flat_results = [item for sublist in batch_results_list for item in sublist]
     for idx, res in zip(uncached_indices, flat_results):
         results[idx] = res
@@ -698,15 +694,19 @@ def parse_bandit_results(file_path: str):
         vuln["cve"] = cve_id
         vuln["ai_explanation"] = ai_explanation
         vulns.append(vuln)
-    # Deduplicate by (file, line, issue_text)
-    unique = []
-    seen = set()
+    # Deduplicate by (file, line, issue_text), collapse to highest severity if duplicates
+    unique = {}
     for v in vulns:
         key = (v.get("file"), v.get("line"), v.get("issue_text"))
-        if key not in seen:
-            unique.append(v)
-            seen.add(key)
-    return unique
+        if key not in unique:
+            unique[key] = v
+        else:
+            old = unique[key]
+            sev_rank = {"low": 1, "medium": 2, "high": 3}
+            if sev_rank.get((v.get("severity") or "medium").lower(), 2) > sev_rank.get((old.get("severity") or "medium").lower(), 2):
+                unique[key] = v
+    vulns = list(unique.values())
+    return vulns
 
 
 
@@ -910,15 +910,19 @@ def parse_semgrep_results(file_path: str):
         vuln["cve"] = cve_id
         vuln["ai_explanation"] = ai_explanation
         vulns.append(vuln)
-    # Deduplicate by (file, line, issue_text)
-    unique = []
-    seen = set()
+    # Deduplicate by (file, line, issue_text), collapse to highest severity if duplicates
+    unique = {}
     for v in vulns:
         key = (v.get("file"), v.get("line"), v.get("issue_text"))
-        if key not in seen:
-            unique.append(v)
-            seen.add(key)
-    return unique
+        if key not in unique:
+            unique[key] = v
+        else:
+            old = unique[key]
+            sev_rank = {"low": 1, "medium": 2, "high": 3}
+            if sev_rank.get((v.get("severity") or "medium").lower(), 2) > sev_rank.get((old.get("severity") or "medium").lower(), 2):
+                unique[key] = v
+    vulns = list(unique.values())
+    return vulns
 
 
 
@@ -938,15 +942,14 @@ def generate_summary(vulns):
     import math
     h, m, l = counts["high"], counts["medium"], counts["low"]
     total_issues = sum(counts.values())
-    # Nonlinear, repository-size-aware trust score scaling
-    base_penalty = 50 * (1 - math.exp(-h / 3)) + 30 * (1 - math.exp(-m / 4)) + 10 * (1 - math.exp(-l / 5))
-    normalization = max(1, total_issues / 8)
-    trust_score = int(max(0, 100 - (base_penalty / normalization)))
+    # Transparent linear trust formula (used in final stable version)
+    trust_score = max(0, 100 - (h * 10 + m * 5 + l * 2))
     return {
         "trust_score": trust_score,
         "counts": counts,
         "total_issues": total_issues
     }
+    
 
 def save_json_report(report, filename="scan_report.json"):
 
